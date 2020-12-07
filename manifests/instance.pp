@@ -65,12 +65,33 @@ define github_actions_runner::instance (
     }
   }
 
-  $archive_name =  "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
+  if $facts['os']['name'] == 'Windows' {
+    $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.zip"
+    $tmp_dir = "${github_actions_runner::root_dir}/${instance_name}-${archive_name}"
+    $configure_script = 'ConfigureInstallRunner.ps1'
+    $configure_script_permissions = '0777'
+  } else {
+    $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
+    $tmp_dir = "/tmp/${instance_name}-${archive_name}"
+    $configure_script = 'configure_install_runner.sh'
+    $configure_script_permissions = '0755'
+  }
+
   $source = "${github_actions_runner::repository_url}/v${github_actions_runner::package_ensure}/${archive_name}"
 
   $ensure_instance_directory = $ensure ? {
     'present' => directory,
     'absent'  => absent,
+  }
+
+  $ensure_service = $ensure ? {
+    'present' => running,
+    'absent'  => stopped,
+  }
+
+  $enable_service = $ensure ? {
+    'present' => true,
+    'absent'  => false,
   }
 
   file { "${github_actions_runner::root_dir}/${instance_name}":
@@ -84,7 +105,7 @@ define github_actions_runner::instance (
 
   archive { "${instance_name}-${archive_name}":
     ensure       => $ensure,
-    path         => "/tmp/${instance_name}-${archive_name}",
+    path         => $tmp_dir,
     user         => $user,
     group        => $group,
     source       => $source,
@@ -95,12 +116,13 @@ define github_actions_runner::instance (
     require      => File["${github_actions_runner::root_dir}/${instance_name}"],
   }
 
-  file { "${github_actions_runner::root_dir}/${name}/configure_install_runner.sh":
+  file { "${github_actions_runner::root_dir}/${name}/${configure_script}":
     ensure  => $ensure,
-    mode    => '0755',
+    path    => "${github_actions_runner::root_dir}/${name}/${configure_script}",
+    mode    => $configure_script_permissions,
     owner   => $user,
     group   => $group,
-    content => epp('github_actions_runner/configure_install_runner.sh.epp', {
+    content => epp("github_actions_runner/${configure_script}.epp", {
       personal_access_token => $personal_access_token,
       token_url             => $token_url,
       instance_name         => $instance_name,
@@ -109,44 +131,43 @@ define github_actions_runner::instance (
       hostname              => $hostname,
       assured_labels        => $assured_labels,
     }),
-    notify  => Exec["${instance_name}-run_configure_install_runner.sh"],
+    notify  => Exec["${instance_name}-run_${configure_script}"],
     require => Archive["${instance_name}-${archive_name}"],
   }
 
-  exec { "${instance_name}-run_configure_install_runner.sh":
-    user        => $user,
-    cwd         => "${github_actions_runner::root_dir}/${instance_name}",
-    command     => "${github_actions_runner::root_dir}/${instance_name}/configure_install_runner.sh",
-    refreshonly => true
-  }
+  if $facts['os']['name'] == 'Windows' {
+    exec { "${instance_name}-run_${configure_script}":
+      logoutput   => true,
+      cwd         => "${github_actions_runner::root_dir}/${instance_name}",
+      path        => $::path,
+      command     => "powershell -ExecutionPolicy RemoteSigned -File ${github_actions_runner::root_dir}/${instance_name}/${configure_script}",
+      refreshonly => true,
+    }
+  } else {
+    exec { "${instance_name}-run_${configure_script}":
+      user        => $user,
+      cwd         => "${github_actions_runner::root_dir}/${instance_name}",
+      command     => "${github_actions_runner::root_dir}/${instance_name}/${configure_script}",
+      refreshonly => true,
+    }
 
-  systemd::unit_file { "github-actions-runner.${instance_name}.service":
-    ensure  => $ensure,
-    content => epp('github_actions_runner/github-actions-runner.service.epp', {
-      instance_name => $instance_name,
-      root_dir      => $github_actions_runner::root_dir,
-      user          => $user,
-      group         => $group,
-    }),
-    require => [File["${github_actions_runner::root_dir}/${instance_name}/configure_install_runner.sh"],
-                Exec["${instance_name}-run_configure_install_runner.sh"]],
-    notify  => Service["github-actions-runner.${instance_name}.service"],
-  }
+    systemd::unit_file { "github-actions-runner.${instance_name}.service":
+      ensure  => $ensure,
+      content => epp('github_actions_runner/github-actions-runner.service.epp', {
+        instance_name => $instance_name,
+        root_dir      => $github_actions_runner::root_dir,
+        user          => $user,
+        group         => $group,
+      }),
+      require => [File["${github_actions_runner::root_dir}/${instance_name}/${configure_script}"],
+                  Exec["${instance_name}-run_${configure_script}"]],
+      notify  => Service["github-actions-runner.${instance_name}.service"],
+    }
 
-  $ensure_service = $ensure ? {
-    'present' => running,
-    'absent'  => stopped,
+    service { "github-actions-runner.${instance_name}.service":
+      ensure  => $ensure_service,
+      enable  => $enable_service,
+      require => Class['systemd::systemctl::daemon_reload'],
+    }
   }
-
-  $enable_service = $ensure ? {
-    'present' => true,
-    'absent'  => false,
-  }
-
-  service { "github-actions-runner.${instance_name}.service":
-    ensure  => $ensure_service,
-    enable  => $enable_service,
-    require => Class['systemd::systemctl::daemon_reload'],
-  }
-
 }
