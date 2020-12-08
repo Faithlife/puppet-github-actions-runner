@@ -5,7 +5,6 @@
       String $url,
       String $hostname,
       String $assured_labels,
-      Boolean $enable_service
 | -%>
 
 # Configure the action runner after the package file has been downloaded.

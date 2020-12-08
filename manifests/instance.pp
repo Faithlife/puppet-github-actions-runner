@@ -148,7 +148,6 @@ define github_actions_runner::instance (
 
     exec { "${instance_name}-run_${configure_script}":
       cwd         => "${github_actions_runner::root_dir}/${instance_name}",
-      logoutput   => true,
       path        => $::path,
       command     => "powershell -ExecutionPolicy RemoteSigned -File ${configure_script}",
       refreshonly => true,
