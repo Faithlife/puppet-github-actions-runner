@@ -69,12 +69,14 @@ define github_actions_runner::instance (
     $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.zip"
     $tmp_dir = "${github_actions_runner::root_dir}/${instance_name}-${archive_name}"
     $configure_script = 'ConfigureInstallRunner.ps1'
-    $configure_script_permissions = '0777'
+    $configure_script_permissions = '0775'
+    $instance_directory_permissions = '0664'
   } else {
     $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
     $tmp_dir = "/tmp/${instance_name}-${archive_name}"
     $configure_script = 'configure_install_runner.sh'
     $configure_script_permissions = '0755'
+    $instance_directory_permissions = '0644'
   }
 
   $source = "${github_actions_runner::repository_url}/v${github_actions_runner::package_ensure}/${archive_name}"
@@ -96,7 +98,7 @@ define github_actions_runner::instance (
 
   file { "${github_actions_runner::root_dir}/${instance_name}":
     ensure  => $ensure_instance_directory,
-    mode    => '0644',
+    mode    => $instance_directory_permissions,
     owner   => $user,
     group   => $group,
     force   => true,
@@ -118,7 +120,6 @@ define github_actions_runner::instance (
 
   file { "${github_actions_runner::root_dir}/${name}/${configure_script}":
     ensure  => $ensure,
-    path    => "${github_actions_runner::root_dir}/${name}/${configure_script}",
     mode    => $configure_script_permissions,
     owner   => $user,
     group   => $group,
@@ -136,13 +137,29 @@ define github_actions_runner::instance (
   }
 
   if $facts['os']['name'] == 'Windows' {
-    exec { "${instance_name}-run_${configure_script}":
-      logoutput   => true,
-      cwd         => "${github_actions_runner::root_dir}/${instance_name}",
+    exec { "fix ${github_actions_runner::root_dir}/${instance_name} permissions":
+      cwd         => $github_actions_runner::root_dir,
       path        => $::path,
-      command     => "powershell -ExecutionPolicy RemoteSigned -File ${github_actions_runner::root_dir}/${instance_name}/${configure_script}",
+      command     => "icacls \".\\${instance_name}\" /grant:r \"${user}:(OI)(CI)F\" /grant:r \"${group}:(OI)(CI)F\"",
+      refreshonly => true,
+      subscribe   => File["${github_actions_runner::root_dir}/${instance_name}/${configure_script}"],
+      notify      => Exec["${instance_name}-run_${configure_script}"],
+    }
+
+    exec { "${instance_name}-run_${configure_script}":
+      cwd         => "${github_actions_runner::root_dir}/${instance_name}",
+      logoutput   => true,
+      path        => $::path,
+      command     => "powershell -ExecutionPolicy RemoteSigned -File ${configure_script}",
       refreshonly => true,
     }
+
+    service { "actions.runner._services.${hostname}-${instance_name}":
+      ensure  => $ensure_service,
+      enable  => $enable_service,
+      require => Exec["${instance_name}-run_${configure_script}"]
+    }
+
   } else {
     exec { "${instance_name}-run_${configure_script}":
       user        => $user,

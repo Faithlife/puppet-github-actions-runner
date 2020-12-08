@@ -1,0 +1,31 @@
+<%- | String $personal_access_token,
+      String $token_url,
+      String $instance_name,
+      Stdlib::Absolutepath $root_dir,
+      String $url,
+      String $hostname,
+      String $assured_labels,
+      Boolean $enable_service
+| -%>
+
+# Configure the action runner after the package file has been downloaded.
+
+$TOKEN = (Invoke-RestMethod -Uri '<%= $token_url %>' `
+    -Method 'POST' `
+    -Headers @{ 'authorization' = 'token <%= $personal_access_token %>' }).token
+
+# (Optional) Remove previous config.
+& .\config.cmd remove `
+  --url <%= $url %> `
+  --token ${TOKEN} `
+  --name <%= $hostname %>-<%= $instance_name %>
+
+# Configure the runner.
+& .\config.cmd `
+  --unattended `
+  --replace `
+  --name <%= $hostname %>-<%= $instance_name %> `
+  --url <%= $url %> `
+  --token ${TOKEN} `
+  --runasservice `
+  <%= $assured_labels %>

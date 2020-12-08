@@ -3,5 +3,7 @@ version: 4
 datadir: data
 
 hierarchy:
+  - name: "%{facts.os.name}.yaml"
+    backend: yaml
   - name: "common"
     backend: yaml

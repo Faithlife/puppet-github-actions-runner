@@ -63,9 +63,14 @@ class github_actions_runner (
     'absent'  => absent,
   }
 
+  $root_dir_permissions = $facts['os']['name'] == 'Windows' ? {
+    true => '0664',
+    default => '0644',
+  }
+
   file { $github_actions_runner::root_dir:
     ensure => $ensure_directory,
-    mode   => '0644',
+    mode   => $root_dir_permissions,
     owner  => $github_actions_runner::user,
     group  => $github_actions_runner::group,
     force  => true,
