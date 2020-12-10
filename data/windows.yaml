@@ -8,6 +8,7 @@ github_actions_runner::github_domain: "https://github.com"
 github_actions_runner::github_api: "https://api.github.com"
 github_actions_runner::org_name: "github_org"
 github_actions_runner::personal_access_token: "PAT"
-github_actions_runner::user: "NETWORK SERVICE"
+github_actions_runner::user: "some_account"
+github_actions_runner::user_password: "changeme"
 github_actions_runner::group: "administrators"
 github_actions_runner::instances: {}

@@ -6,7 +6,7 @@
       String $hostname,
       String $assured_labels,
       String $user,
-      String $user_password,
+      Optional[String] $user_password,
 | -%>
 #!/bin/bash
 # Configure the action runner after the package file has been downloaded.

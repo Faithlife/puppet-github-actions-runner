@@ -50,7 +50,7 @@ class github_actions_runner (
   String                    $package_ensure,
   String                    $repository_url,
   String                    $user,
-  String                    $user_password,
+  Optional[String]          $user_password,
   String                    $group,
   Hash[String, Hash]        $instances,
   String                    $github_domain,
