@@ -71,7 +71,7 @@ define github_actions_runner::instance (
     $tmp_dir = "${github_actions_runner::root_dir}/${instance_name}-${archive_name}"
     $configure_script = 'ConfigureInstallRunner.ps1'
     $configure_script_permissions = '0775'
-    $instance_directory_permissions = '0664'
+    $instance_directory_permissions = undef
   } else {
     $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
     $tmp_dir = "/tmp/${instance_name}-${archive_name}"
