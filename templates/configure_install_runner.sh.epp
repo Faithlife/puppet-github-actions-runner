@@ -5,6 +5,7 @@
       String $url,
       String $hostname,
       String $assured_labels,
+      String $assured_runner_group,
       String $user,
       Optional[String] $user_password,
 | -%>
@@ -34,7 +35,8 @@ export RUNNER_ALLOW_RUNASROOT=true
   --name <%= $hostname %>-<%= $instance_name %>  \
   --url <%= $url %>                              \
   --token ${TOKEN}                               \
-  <%= $assured_labels %> &>/dev/null
+  <%= $assured_labels %>                         \
+  <%= $assured_runner_group %>  &>/dev/null
 
 # Copy service endpoint script.
 if [ ! -f <%= $root_dir %>/<%= $instance_name %>/runsvc.sh ]; then

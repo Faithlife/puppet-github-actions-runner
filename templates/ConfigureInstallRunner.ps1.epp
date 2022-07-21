@@ -5,6 +5,7 @@
       String $url,
       String $hostname,
       String $assured_labels,
+      String $assured_runner_group,
       String $user,
       String $user_password,
 | -%>
@@ -31,4 +32,5 @@ $TOKEN = (Invoke-RestMethod -Uri '<%= $token_url %>' `
   --runasservice `
   --windowslogonaccount "<%= $user %>" `
   --windowslogonpassword "<%= $user_password %>" `
-  <%= $assured_labels %>
+  <%= $assured_labels %> `
+  <%= $assured_runner_group %>  

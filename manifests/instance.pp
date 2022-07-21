@@ -29,6 +29,9 @@
 # * labels
 # Optional[Array[String]], A list of costum lables to add to a runner.
 #
+# * runner_group
+# Optional[String], The group to add this runner to if an org runner.
+#
 
 define github_actions_runner::instance (
   Enum['present', 'absent'] $ensure                = 'present',
@@ -40,6 +43,7 @@ define github_actions_runner::instance (
   String                    $hostname              = $::facts['hostname'],
   String                    $instance_name         = $title,
   Optional[Array[String]]   $labels                = undef,
+  Optional[String]          $runner_group          = undef,
   Optional[String]          $repo_name             = undef,
   String                    $github_domain         = $github_actions_runner::github_domain,
   String                    $github_api            = $github_actions_runner::github_api,
@@ -50,6 +54,17 @@ define github_actions_runner::instance (
     $assured_labels="--labels ${flattend_labels_list}"
   } else {
     $assured_labels = ''
+  }
+
+  if $runner_group {
+    if $repo_name {
+      warning("Ignoring runner_group ${runner_group} for repo specific instance ${org_name}/${repo_name}")
+      $assured_runner_group=''
+    } else {
+      $assured_runner_group="--runnergroup \"${runner_group}\""
+    }
+  } else {
+    $assured_runner_group=''
   }
 
   $url = $repo_name ? {
@@ -119,7 +134,7 @@ define github_actions_runner::instance (
     require      => File["${github_actions_runner::root_dir}/${instance_name}"],
   }
 
-  file { "${github_actions_runner::root_dir}/${name}/${configure_script}":
+  file { "${github_actions_runner::root_dir}/${instance_name}/${configure_script}":
     ensure  => $ensure,
     mode    => $configure_script_permissions,
     owner   => $user,
@@ -132,6 +147,7 @@ define github_actions_runner::instance (
       url                   => $url,
       hostname              => $hostname,
       assured_labels        => $assured_labels,
+      assured_runner_group  => $assured_runner_group,
       user                  => $user,
       user_password         => $user_password,
     }),
