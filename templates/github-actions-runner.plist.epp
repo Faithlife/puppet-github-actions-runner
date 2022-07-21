@@ -1,0 +1,37 @@
+<%- | String $instance_name,
+      Stdlib::Absolutepath $root_dir,
+      String $user,
+| -%>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>github-actions-runner-<%= $instance_name %></string>
+    <key>ProgramArguments</key>
+    <array>
+      <string><%= $root_dir %>/<%= $instance_name %>/runsvc.sh</string>
+    </array>
+    <key>UserName</key>
+    <string><%= $user %></string>
+    <key>WorkingDirectory</key>
+    <string><%= $root_dir %>/<%= $instance_name %></string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string><%= $root_dir %>/<%= $instance_name %>/Logs/stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string><%= $root_dir %>/<%= $instance_name %>/Logs/stderr.log</string>
+    <key>EnvironmentVariables</key>
+    <dict> 
+      <key>ACTIONS_RUNNER_SVC</key>
+      <string>1</string>
+    </dict>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>SessionCreate</key>
+    <true/>
+  </dict>
+</plist>

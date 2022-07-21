@@ -87,6 +87,12 @@ define github_actions_runner::instance (
     $configure_script = 'ConfigureInstallRunner.ps1'
     $configure_script_permissions = '0775'
     $instance_directory_permissions = undef
+  } elsif $facts['os']['name'] == 'Darwin' {
+    $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
+    $tmp_dir = "/tmp/${instance_name}-${archive_name}"
+    $configure_script = 'configure_install_runner_darwin.sh'
+    $configure_script_permissions = '0755'
+    $instance_directory_permissions = '0644'
   } else {
     $archive_name = "${github_actions_runner::package_name}-${github_actions_runner::package_ensure}.tar.gz"
     $tmp_dir = "/tmp/${instance_name}-${archive_name}"
@@ -177,7 +183,32 @@ define github_actions_runner::instance (
       enable  => $enable_service,
       require => Exec["${instance_name}-run_${configure_script}"]
     }
+  } elsif $facts['os']['name'] == 'Darwin' {
+    exec { "${instance_name}-run_${configure_script}":
+      user        => $user,
+      cwd         => "${github_actions_runner::root_dir}/${instance_name}",
+      command     => "${github_actions_runner::root_dir}/${instance_name}/${configure_script}",
+      refreshonly => true,
+    }
 
+    file { "${instance_name} launchd plist":
+      path    => "/Library/LaunchDaemons/github-actions-runner.${instance_name}.plist",
+      ensure  => file,
+      content => epp('github_actions_runner/github-actions-runner.plist.epp', {
+        instance_name => $instance_name,
+        root_dir      => $github_actions_runner::root_dir,
+        user          => $user,
+      }),
+      mode    => '0644',
+      owner   => '0',
+      group   => '0'
+    }
+
+    service { "github-actions-runner-${instance_name}":
+      name    => "github-actions-runner-${instance_name}",
+      ensure  => $ensure_service,
+      enable  => $enable_service,
+    }
   } else {
     exec { "${instance_name}-run_${configure_script}":
       user        => $user,

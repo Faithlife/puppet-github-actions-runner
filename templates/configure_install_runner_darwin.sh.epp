@@ -1,0 +1,58 @@
+<%- | String $personal_access_token,
+      String $token_url,
+      String $instance_name,
+      Stdlib::Absolutepath $root_dir,
+      String $url,
+      String $hostname,
+      String $assured_labels,
+      String $assured_runner_group,
+      String $user,
+      Optional[String] $user_password,
+| -%>
+#!/bin/bash
+# Configure the action runner after the package file has been downloaded.
+set -e
+
+# Get registration token.
+TOKENJSON=$(curl -s -XPOST -H "authorization: token <%= $personal_access_token %>" <%= $token_url %>)
+
+# disable errexit so that EOF works for read below
+set +e
+
+read -r -d '' TOKENJSONSCRIPT <<EOF
+function run() {
+  const token_json = JSON.parse(\`$TOKENJSON\`);
+  return token_json.token;
+}
+EOF
+
+set -e
+
+TOKEN=`osascript -l "JavaScript" <<< "${TOKENJSONSCRIPT}"`
+
+# Allow root
+export RUNNER_ALLOW_RUNASROOT=true
+
+
+# (Optional) Remove previous config.
+<%= $root_dir %>/<%= $instance_name %>/config.sh remove \
+  --url <%= $url %>                                     \
+  --token ${TOKEN}                                      \
+  --name <%= $hostname %>-<%= $instance_name %> &>/dev/null
+
+
+# Configure the runner.
+<%= $root_dir %>/<%= $instance_name %>/config.sh \
+  --unattended                                   \
+  --replace                                      \
+  --name <%= $hostname %>-<%= $instance_name %>  \
+  --url <%= $url %>                              \
+  --token ${TOKEN}                               \
+  <%= $assured_labels %>                         \
+  <%= $assured_runner_group %>  &>/dev/null
+
+# Copy service endpoint script.
+if [ ! -f <%= $root_dir %>/<%= $instance_name %>/runsvc.sh ]; then
+  cp <%= $root_dir %>/<%= $instance_name %>/bin/runsvc.sh <%= $root_dir %>/<%= $instance_name %>/runsvc.sh
+  chmod 755 <%= $root_dir %>/<%= $instance_name %>/runsvc.sh
+fi
