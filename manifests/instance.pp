@@ -233,7 +233,6 @@ define github_actions_runner::instance (
     service { "github-actions-runner.${instance_name}.service":
       ensure  => $ensure_service,
       enable  => $enable_service,
-      require => Class['systemd::systemctl::daemon_reload'],
     }
   }
 }
