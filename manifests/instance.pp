@@ -75,10 +75,7 @@ define github_actions_runner::instance (
   if $repo_name {
     $token_url = "${github_api}/repos/${org_name}/${repo_name}/actions/runners/registration-token"
   } else {
-    $token_url = $github_api ? {
-      'https://api.github.com' => "${github_api}/repos/${org_name}/actions/runners/registration-token",
-      default => "${github_api}/orgs/${org_name}/actions/runners/registration-token",
-    }
+    $token_url = "${github_api}/orgs/${org_name}/actions/runners/registration-token"
   }
 
   if $facts['os']['name'] == 'Windows' {
