@@ -56,3 +56,6 @@ if [ ! -f <%= $root_dir %>/<%= $instance_name %>/runsvc.sh ]; then
   cp <%= $root_dir %>/<%= $instance_name %>/bin/runsvc.sh <%= $root_dir %>/<%= $instance_name %>/runsvc.sh
   chmod 755 <%= $root_dir %>/<%= $instance_name %>/runsvc.sh
 fi
+
+# Ensure Logging directory exists (used in github-actions-runner.plist).
+mkdir -p  <%= $root_dir %>/<%= $instance_name %>/Logs
